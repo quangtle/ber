@@ -1,0 +1,26 @@
+* text=auto eol=lf
+
+*.go text
+*.c text
+*.cpp text
+*.h text
+*.hpp text
+*.js text
+*.css text
+*.html text
+*.md text
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.yml text
+*.yaml text
+*.json text
+*.mod text
+*.sum text
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary

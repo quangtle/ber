@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: windows-amd64
+            runner: windows-latest
+            os: windows
+            arch: amd64
+          - target: linux-amd64
+            runner: ubuntu-latest
+            os: linux
+            arch: amd64
+          - target: linux-arm64
+            runner: ubuntu-latest
+            os: linux
+            arch: arm64
+          - target: darwin-amd64
+            runner: macos-13
+            os: darwin
+            arch: amd64
+          - target: darwin-arm64
+            runner: macos-latest
+            os: darwin
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build server
+        run: |
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} \
+            go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" \
+            -o release/ber-server${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/ber-server/
+        working-directory: server
+
+      - name: Build client (Windows only)
+        if: matrix.os == 'windows'
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          cmake --install build --prefix ../release
+        working-directory: client
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd release
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            7z a "ber-${{ github.ref_name }}-${{ matrix.target }}.zip" *
+          else
+            tar czf "ber-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" *
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ber-${{ github.ref_name }}-${{ matrix.target }}
+          path: release/
+
+  create-release:
+    name: Create GitHub Release
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: List artifacts
+        run: ls -laR artifacts/
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**/*

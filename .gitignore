@@ -1,0 +1,43 @@
+# Build outputs
+build/
+server/ber-server
+server/ber-server.exe
+client/ber-client
+client/ber-client.exe
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+server/vendor/
+client/3rdparty/
+
+# Generated
+*.log
+*.tmp
+*.out
+coverage/
+cover.html
+
+# Go
+server/*.test
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Release artifacts
+release/
+dist/
