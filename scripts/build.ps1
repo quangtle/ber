@@ -27,7 +27,7 @@ if (-not $ClientOnly) {
     $serverOut = Join-Path $buildDir "ber-server.exe"
     Push-Location (Join-Path $rootDir "server")
     try {
-        go build -ldflags="-s -w" -o $serverOut .\cmd\ber-server\
+        go build -ldflags="-s -w -H=windowsgui" -o $serverOut .\cmd\ber-server\
         if ($LASTEXITCODE -ne 0) { throw "Server build failed" }
         Write-Host "  $serverOut" -ForegroundColor Green
     } finally {
