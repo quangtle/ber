@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -47,6 +48,8 @@ func onReady() {
 
 	mStatus := systray.AddMenuItem(fmt.Sprintf("ber-server — %s", cfg.ListenAddr), "Server status")
 	mStatus.Disable()
+	mDesktop := systray.AddMenuItem("Open Desktop", "Launch the desktop app")
+	mBrowser := systray.AddMenuItem("Open in Browser", "Open web UI in your browser")
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Shut down the server")
 
@@ -106,6 +109,21 @@ func onReady() {
 		systray.Quit()
 	}()
 
+	// Desktop app launcher
+	go func() {
+		for {
+			<-mDesktop.ClickedCh
+			launchDesktop()
+		}
+	}()
+
+	go func() {
+		for {
+			<-mBrowser.ClickedCh
+			openBrowser("http://" + cfg.ListenAddr)
+		}
+	}()
+
 	// Quit via tray menu
 	<-mQuit.ClickedCh
 	log.Println("shutting down via tray...")
@@ -115,6 +133,26 @@ func onReady() {
 
 func onExit() {
 	// cleanup done in shutdown
+}
+
+func launchDesktop() {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Printf("can't find server exe: %v", err)
+		return
+	}
+	desktop := filepath.Join(filepath.Dir(exe), "ber-desktop.exe")
+	if _, err := os.Stat(desktop); os.IsNotExist(err) {
+		log.Printf("ber-desktop.exe not found at %s", desktop)
+		return
+	}
+	cmd := exec.Command(desktop)
+	cmd.Start()
+}
+
+func openBrowser(url string) {
+	// ponytail: "start" is the Windows way, no need to find the browser
+	exec.Command("cmd", "/c", "start", url).Start()
 }
 
 func shutdown(srv *http.Server, db *database.DB) {
