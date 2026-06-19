@@ -177,6 +177,23 @@ func (l *Library) Scan() error {
 	return nil
 }
 
+func (l *Library) ScanDir(dir string) error {
+	return filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip inaccessible entries
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if !supportedExts[ext] {
+			return nil
+		}
+		l.Add(path) // best-effort per file
+		return nil
+	})
+}
+
 func (l *Library) ScanWithProbe(probe func(path string) (*Video, error)) error {
 	entries, err := os.ReadDir(l.libraryPath)
 	if err != nil {

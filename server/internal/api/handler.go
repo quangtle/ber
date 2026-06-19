@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"runtime"
+	"sort"
 	"fmt"
 	"io"
 	"log"
@@ -60,6 +62,8 @@ func NewRouter(lib *library.Library, cfg *config.Config) *chi.Mux {
 		r.Delete("/library/{id}", h.removeFromLibrary)
 		r.Get("/stream/{id}", h.streamVideo)
 		r.Get("/stream/{id}/thumbnail", h.thumbnail)
+		r.Get("/browse", h.browse)
+		r.Post("/library/scan-dir", h.scanDir)
 	})
 	return r
 }
@@ -155,6 +159,90 @@ func (h *Handler) removeFromLibrary(w http.ResponseWriter, r *http.Request) {
 	}
 	writeOK(w, "removed")
 }
+func (h *Handler) browse(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		// list all drives on Windows
+		drives := listDrives()
+		writeOK(w, map[string]interface{}{
+			"current": "",
+			"parent":  "",
+			"entries": drives,
+		})
+		return
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "cannot read directory: "+err.Error())
+		return
+	}
+	type entry struct {
+		Name  string `json:"name"`
+		IsDir bool   `json:"is_dir"`
+		Path  string `json:"path"`
+	}
+	list := make([]entry, 0)
+	for _, e := range entries {
+		list = append(list, entry{
+			Name:  e.Name(),
+			IsDir: e.IsDir(),
+			Path:  filepath.Join(path, e.Name()),
+		})
+	}
+	parent := filepath.Dir(path)
+	if parent == path {
+		parent = ""
+	}
+	writeOK(w, map[string]interface{}{
+		"current": path,
+		"parent":  parent,
+		"entries": list,
+	})
+}
+
+func listDrives() []map[string]interface{} {
+	var list []map[string]interface{}
+	if runtime.GOOS == "windows" {
+		for _, d := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+			path := string(d) + ":\\"
+			if _, err := os.Stat(path); err == nil {
+				list = append(list, map[string]interface{}{
+					"name": string(d) + ":",
+					"is_dir": true,
+					"path": path,
+				})
+			}
+		}
+		sort.Slice(list, func(i, j int) bool { return list[i]["name"].(string) < list[j]["name"].(string) })
+	} else {
+		list = append(list, map[string]interface{}{
+			"name": "/",
+			"is_dir": true,
+			"path": "/",
+		})
+	}
+	return list
+}
+func (h *Handler) scanDir(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+	err := h.lib.ScanDir(req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeOK(w, "scan completed")
+}
+
 
 func (h *Handler) streamVideo(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")

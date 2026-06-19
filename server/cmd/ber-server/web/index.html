@@ -11,10 +11,39 @@
   <h1>ber</h1>
   <div class="header-controls">
     <span id="status" class="status-indicator">disconnected</span>
-    <input type="text" id="serverAddr" placeholder="localhost:8080" value="localhost:8080">
+    <button id="importBtn" title="Import a media file">Import</button>
     <button id="scanBtn" title="Scan library">Scan</button>
   </div>
 </header>
+<div id="importModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Import Media</h3>
+    <p>Enter a file path or browse for a folder to scan.</p>
+    <div class="import-row">
+      <input type="text" id="importPath" placeholder="C:\Videos\movie.mp4">
+      <button id="browseBtn">Browse</button>
+    </div>
+    <div class="modal-actions">
+      <button id="importCancelBtn">Cancel</button>
+      <button id="importConfirmBtn">Import</button>
+    </div>
+    <span id="importError" class="import-error"></span>
+  </div>
+</div>
+<div id="browseModal" class="modal hidden">
+  <div class="modal-content browse-content">
+    <h3>Select a Folder</h3>
+    <div id="browserHeader">
+      <button id="browserUpBtn" title="Go up">↑ Up</button>
+      <span id="browserPath">C:\</span>
+    </div>
+    <ul id="browserList"></ul>
+    <div class="modal-actions">
+      <button id="browserCancelBtn">Cancel</button>
+      <button id="browserSelectBtn">Select This Folder</button>
+    </div>
+  </div>
+</div>
 <main>
   <aside class="sidebar">
     <h2>Library</h2>

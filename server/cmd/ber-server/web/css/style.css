@@ -163,6 +163,143 @@ main {
   font-size: 1.1rem;
 }
 
+/* Import modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  padding: 24px;
+  min-width: 420px;
+}
+.modal-content h3 {
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.modal-content p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.modal-content input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid #333;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.modal-actions button {
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+#importCancelBtn {
+  background: #444;
+  color: var(--text);
+}
+#importConfirmBtn {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.import-error {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #e74c3c;
+}
+
+.import-row {
+  display: flex;
+  gap: 8px;
+}
+.import-row input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid #333;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+#browseBtn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+#browseBtn:hover { background: #1a5276; }
+
+.browse-content { min-width: 500px; max-height: 500px; display: flex; flex-direction: column; }
+.browse-content h3 { margin-bottom: 8px; color: var(--accent); }
+#browserHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--surface2); margin-bottom: 8px;
+}
+#browserUpBtn {
+  background: var(--surface2); color: var(--text); border: 1px solid #444;
+  padding: 4px 12px; border-radius: var(--radius); cursor: pointer;
+  font-size: 0.85rem;
+}
+#browserPath { font-size: 0.85rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#browserList {
+  list-style: none; overflow-y: auto; flex: 1; min-height: 200px; max-height: 300px;
+}
+.browser-dir {
+  padding: 6px 12px; cursor: pointer; font-size: 0.9rem; border-radius: 4px;
+}
+.browser-dir:hover { background: var(--surface2); }
+.browser-dir::before { content: "📁 "; }
+.browser-loading, .browser-empty, .browser-error {
+  padding: 12px; font-size: 0.85rem; color: var(--text-muted); text-align: center;
+}
+.browser-error { color: #e74c3c; }
+
+#browserCancelBtn {
+  background: #444; color: var(--text); border: none;
+  padding: 6px 16px; border-radius: var(--radius); cursor: pointer;
+}
+#browserSelectBtn {
+  background: var(--accent); color: #fff; border: none;
+  padding: 6px 16px; border-radius: var(--radius); cursor: pointer; font-weight: 600;
+}
+
+#importBtn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+#importBtn:hover {
+  background: #1a5276;
+}
+
 .video-info {
   padding: 12px 0;
   font-size: 0.85rem;
