@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -58,7 +59,7 @@ func onReady() {
 		log.Fatalf("failed to open database: %v", err)
 	}
 
-	if err := db.Migrate(); err != nil {
+	if err := database.Migrate(db); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -155,7 +156,7 @@ func openBrowser(url string) {
 	exec.Command("cmd", "/c", "start", url).Start()
 }
 
-func shutdown(srv *http.Server, db *database.DB) {
+func shutdown(srv *http.Server, db *sql.DB) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {

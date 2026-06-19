@@ -8,11 +8,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type DB struct {
-	*sql.DB
-}
-
-func Open(path string) (*DB, error) {
+func Open(path string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return nil, err
 	}
@@ -26,10 +22,10 @@ func Open(path string) (*DB, error) {
 		return nil, err
 	}
 
-	return &DB{db}, nil
+	return db, nil
 }
 
-func (db *DB) Migrate() error {
+func Migrate(db *sql.DB) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS videos (
 			id          TEXT PRIMARY KEY,

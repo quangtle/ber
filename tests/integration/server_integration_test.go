@@ -3,11 +3,9 @@
 package integration
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -16,68 +14,6 @@ import (
 	"github.com/anomalyco/ber/internal/database"
 	"github.com/anomalyco/ber/internal/library"
 )
-
-func TestLibraryScanWithProbe(t *testing.T) {
-	if _, err := exec.LookPath("ffprobe"); err != nil {
-		t.Skip("ffprobe not found, skipping integration test")
-	}
-
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-	libPath := filepath.Join(tmpDir, "videos")
-	os.MkdirAll(libPath, 0755)
-
-	fixturePath := filepath.Join("..", "tests", "fixtures", "sample_h264.mp4")
-	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
-		t.Skip("test fixture not found, skipping")
-	}
-
-	data, err := os.ReadFile(fixturePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.WriteFile(filepath.Join(libPath, "sample.mp4"), data, 0644)
-
-	db, err := database.Open(dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	db.Migrate()
-
-	lib := library.New(db, libPath)
-	ffmpegProbe := func(path string) (*library.Video, error) {
-		info, err := os.Stat(path)
-		if err != nil {
-			return nil, err
-		}
-		return &library.Video{
-			Title:    filepath.Base(path),
-			FilePath: path,
-			FileSize: info.Size(),
-			Duration: 1.0,
-			Width:    640,
-			Height:   480,
-			Codec:    "h264",
-			Container: "mp4",
-		}, nil
-	}
-
-	if err := lib.ScanWithProbe(ffmpegProbe); err != nil {
-		t.Fatal(err)
-	}
-
-	videos, err := lib.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(videos) != 1 {
-		t.Fatalf("expected 1 video, got %d", len(videos))
-	}
-	if videos[0].Codec != "h264" {
-		t.Fatalf("expected h264 codec, got %s", videos[0].Codec)
-	}
-}
 
 func TestStreamRangeRequestIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -94,7 +30,7 @@ func TestStreamRangeRequestIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	db.Migrate()
+	database.Migrate(db)
 
 	lib := library.New(db, libPath)
 	cfg := &config.Config{LibraryPath: libPath, DBPath: dbPath}

@@ -4,13 +4,9 @@ import (
 	"encoding/json"
 	"runtime"
 	"sort"
-	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/anomalyco/ber/internal/config"
@@ -264,48 +260,7 @@ func (h *Handler) streamVideo(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	stat, _ := file.Stat()
-	fileSize := stat.Size()
-
-	rangeHeader := r.Header.Get("Range")
-	if rangeHeader == "" {
-		w.Header().Set("Content-Type", detectContentType(v.FilePath))
-		w.Header().Set("Content-Length", strconv.FormatInt(fileSize, 10))
-		w.Header().Set("Accept-Ranges", "bytes")
-		w.WriteHeader(http.StatusOK)
-		io.Copy(w, file)
-		return
-	}
-
-	rangeStr := strings.TrimPrefix(rangeHeader, "bytes=")
-	parts := strings.SplitN(rangeStr, "-", 2)
-	if len(parts) != 2 {
-		writeError(w, http.StatusBadRequest, "invalid range")
-		return
-	}
-
-	start, _ := strconv.ParseInt(parts[0], 10, 64)
-	var end int64
-	if parts[1] == "" {
-		end = fileSize - 1
-	} else {
-		end, _ = strconv.ParseInt(parts[1], 10, 64)
-	}
-
-	if start > end || start < 0 || end >= fileSize {
-		w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", fileSize))
-		writeError(w, http.StatusRequestedRangeNotSatisfiable, "invalid range")
-		return
-	}
-
-	chunkSize := end - start + 1
-	w.Header().Set("Content-Type", detectContentType(v.FilePath))
-	w.Header().Set("Content-Length", strconv.FormatInt(chunkSize, 10))
-	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, fileSize))
-	w.Header().Set("Accept-Ranges", "bytes")
-	w.WriteHeader(http.StatusPartialContent)
-
-	file.Seek(start, io.SeekStart)
-	io.CopyN(w, file, chunkSize)
+	http.ServeContent(w, r, stat.Name(), stat.ModTime(), file)
 }
 
 func (h *Handler) thumbnail(w http.ResponseWriter, r *http.Request) {
@@ -327,43 +282,9 @@ func (h *Handler) thumbnail(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, thumbPath)
 }
 
-func detectContentType(path string) string {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".mp4", ".m4v":
-		return "video/mp4"
-	case ".mkv":
-		return "video/x-matroska"
-	case ".webm":
-		return "video/webm"
-	case ".avi":
-		return "video/x-msvideo"
-	case ".mov":
-		return "video/quicktime"
-	case ".wmv":
-		return "video/x-ms-wmv"
-	case ".flv":
-		return "video/x-flv"
-	case ".mpeg", ".mpg":
-		return "video/mpeg"
-	case ".ts", ".mts":
-		return "video/mp2t"
-	case ".ogv":
-		return "video/ogg"
-	default:
-		return "application/octet-stream"
-	}
-}
-
 func thumbnailPath(filePath string) string {
 	dir := filepath.Dir(filePath)
 	base := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 	return filepath.Join(dir, ".ber", base+".png")
 }
 
-func (h *Handler) loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.Method, r.URL.Path, r.RemoteAddr)
-		next.ServeHTTP(w, r)
-	})
-}

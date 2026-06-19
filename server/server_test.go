@@ -15,7 +15,7 @@ import (
 	"github.com/anomalyco/ber/internal/library"
 )
 
-func setupTestServer(t *testing.T) (*http.ServeMux, string) {
+func setupTestServer(t *testing.T) (http.Handler, string) {
 	t.Helper()
 
 	tmpDir := t.TempDir()
@@ -23,7 +23,6 @@ func setupTestServer(t *testing.T) (*http.ServeMux, string) {
 	libPath := filepath.Join(tmpDir, "videos")
 	os.MkdirAll(libPath, 0755)
 
-	// Create a small test file
 	testFile := filepath.Join(libPath, "test.mp4")
 	os.WriteFile(testFile, []byte("fake mp4 content"), 0644)
 
@@ -32,15 +31,12 @@ func setupTestServer(t *testing.T) (*http.ServeMux, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	db.Migrate()
+	database.Migrate(db)
 
 	lib := library.New(db, libPath)
 	cfg := &config.Config{LibraryPath: libPath, DBPath: dbPath}
 
-	mux := http.NewServeMux()
-	apiMux := api.NewRouter(lib, cfg)
-	mux.Handle("/api/", apiMux)
-	return mux, testFile
+	return api.NewRouter(lib, cfg), testFile
 }
 
 func TestStatusEndpoint(t *testing.T) {

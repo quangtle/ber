@@ -7,9 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/anomalyco/ber/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -46,11 +44,11 @@ type Video struct {
 }
 
 type Library struct {
-	db          *database.DB
+	db          *sql.DB
 	libraryPath string
 }
 
-func New(db *database.DB, libraryPath string) *Library {
+func New(db *sql.DB, libraryPath string) *Library {
 	return &Library{db: db, libraryPath: libraryPath}
 }
 
@@ -192,59 +190,6 @@ func (l *Library) ScanDir(dir string) error {
 		l.Add(path) // best-effort per file
 		return nil
 	})
-}
-
-func (l *Library) ScanWithProbe(probe func(path string) (*Video, error)) error {
-	entries, err := os.ReadDir(l.libraryPath)
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-	var errs []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		fullPath := filepath.Join(l.libraryPath, entry.Name())
-		ext := strings.ToLower(filepath.Ext(fullPath))
-		if !supportedExts[ext] {
-			continue
-		}
-
-		v, pErr := probe(fullPath)
-		if pErr != nil {
-			errs = append(errs, fmt.Sprintf("%s: probe failed: %v", entry.Name(), pErr))
-			continue
-		}
-
-		if v.ID == "" {
-			v.ID = uuid.New().String()
-		}
-		v.UpdatedAt = now.Format(time.RFC3339)
-
-		_, dbErr := l.db.Exec(`
-			INSERT INTO videos (id, title, file_path, file_size, duration,
-			                    width, height, codec, bitrate, container)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT(file_path) DO UPDATE SET
-				title=excluded.title, file_size=excluded.file_size,
-				duration=excluded.duration, width=excluded.width,
-				height=excluded.height, codec=excluded.codec,
-				bitrate=excluded.bitrate, container=excluded.container,
-				updated_at=datetime('now')
-		`, v.ID, v.Title, v.FilePath, v.FileSize, v.Duration,
-			v.Width, v.Height, v.Codec, v.Bitrate, v.Container)
-		if dbErr != nil {
-			errs = append(errs, fmt.Sprintf("%s: db error: %v", entry.Name(), dbErr))
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("scan with probe completed with %d errors:\n%s",
-			len(errs), strings.Join(errs, "\n"))
-	}
-	return nil
 }
 
 func (l *Library) LibraryPath() string {
