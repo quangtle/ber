@@ -23,7 +23,7 @@ import (
 //go:embed all:web
 var webFS embed.FS
 
-//go:embed icon.png
+//go:embed icon.ico
 var iconBytes []byte
 
 var Version = "dev"
