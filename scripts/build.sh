@@ -24,6 +24,8 @@ if [ "${1:-}" != "--client-only" ]; then
     cd "$ROOT_DIR/server"
     go build -ldflags="-s -w" -o "$BUILD_DIR/ber-server" ./cmd/ber-server/
     echo "  $BUILD_DIR/ber-server"
+    go build -ldflags="-s -w" -o "$BUILD_DIR/ber-desktop" ./cmd/ber-desktop/
+    echo "  $BUILD_DIR/ber-desktop"
 fi
 
 if [ "${1:-}" != "--server-only" ]; then

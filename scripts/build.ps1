@@ -25,11 +25,15 @@ Write-Host "=== ber Build Script ===" -ForegroundColor Cyan
 if (-not $ClientOnly) {
     Write-Host "`nBuilding server..." -ForegroundColor Yellow
     $serverOut = Join-Path $buildDir "ber-server.exe"
+    $desktopOut = Join-Path $buildDir "ber-desktop.exe"
     Push-Location (Join-Path $rootDir "server")
     try {
         go build -ldflags="-s -w -H=windowsgui" -o $serverOut .\cmd\ber-server\
         if ($LASTEXITCODE -ne 0) { throw "Server build failed" }
         Write-Host "  $serverOut" -ForegroundColor Green
+        go build -ldflags="-s -w" -o $desktopOut .\cmd\ber-desktop\
+        if ($LASTEXITCODE -ne 0) { throw "Desktop build failed" }
+        Write-Host "  $desktopOut" -ForegroundColor Green
     } finally {
         Pop-Location
     }
