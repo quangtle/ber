@@ -7,6 +7,7 @@
 #include <QSlider>
 #include <QLabel>
 #include <QPushButton>
+#include <QTimer>
 #include <QEvent>
 
 class VideoPlayer : public QWidget {
@@ -18,6 +19,9 @@ public:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 public slots:
     void play();
@@ -29,6 +33,7 @@ public slots:
 
 signals:
     void playPauseToggled(bool playing);
+    void mouseActivity();
 
 private slots:
     void onPositionChanged(qint64 position);
@@ -37,6 +42,9 @@ private slots:
 
 private:
     void setupUi();
+    void showControls();
+    void hideControls();
+    void resetHideTimer();
     static QString formatTime(qint64 ms);
 
     QMediaPlayer *m_mediaPlayer;
@@ -50,6 +58,8 @@ private:
     QLabel *m_durationLabel;
     QPushButton *m_muteBtn;
     QSlider *m_volumeSlider;
+    QWidget *m_controlsOverlay;
+    QTimer *m_hideTimer;
 
     bool m_seekDragging = false;
 };

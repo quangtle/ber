@@ -15,6 +15,8 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     , m_durationLabel(new QLabel("0:00"))
     , m_muteBtn(new QPushButton)
     , m_volumeSlider(new QSlider(Qt::Horizontal))
+    , m_controlsOverlay(new QWidget(this))
+    , m_hideTimer(new QTimer(this))
 {
     setupUi();
 
@@ -22,6 +24,12 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     m_mediaPlayer->setAudioOutput(m_audioOutput);
     m_audioOutput->setVolume(1.0);
     m_videoWidget->installEventFilter(this);
+    m_videoWidget->setMouseTracking(true);
+    setMouseTracking(true);
+
+    m_hideTimer->setSingleShot(true);
+    m_hideTimer->setInterval(5000);
+    connect(m_hideTimer, &QTimer::timeout, this, &VideoPlayer::hideControls);
 
     connect(m_mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoPlayer::onPositionChanged);
     connect(m_mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoPlayer::onDurationChanged);
@@ -47,22 +55,25 @@ void VideoPlayer::setupUi() {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(m_videoWidget, 1);
 
+    // controls overlay — semi-transparent, overlaid on video
+    auto *ctrlLayout = new QVBoxLayout(m_controlsOverlay);
+    ctrlLayout->setContentsMargins(0, 0, 0, 0);
+
     // seek bar row
     auto *seekRow = new QHBoxLayout();
     seekRow->setContentsMargins(8, 0, 8, 0);
     seekRow->addWidget(m_timeLabel);
     seekRow->addWidget(m_seekBar, 1);
     seekRow->addWidget(m_durationLabel);
-    layout->addLayout(seekRow);
+    ctrlLayout->addLayout(seekRow);
 
     // controls row
-    auto *ctrlRow = new QHBoxLayout();
-    ctrlRow->setContentsMargins(8, 0, 8, 8);
+    auto *btnRow = new QHBoxLayout();
+    btnRow->setContentsMargins(8, 0, 8, 8);
 
     m_playPauseBtn->setText("▶");
     m_playPauseBtn->setFixedWidth(36);
 
-    // ponytail: use unicode speaker icons, no icon files needed
     m_muteBtn->setText("🔊");
     m_muteBtn->setFixedWidth(36);
 
@@ -70,11 +81,24 @@ void VideoPlayer::setupUi() {
     m_volumeSlider->setValue(100);
     m_volumeSlider->setFixedWidth(120);
 
-    ctrlRow->addWidget(m_playPauseBtn);
-    ctrlRow->addWidget(m_muteBtn);
-    ctrlRow->addWidget(m_volumeSlider);
-    ctrlRow->addStretch();
-    layout->addLayout(ctrlRow);
+    btnRow->addWidget(m_playPauseBtn);
+    btnRow->addWidget(m_muteBtn);
+    btnRow->addWidget(m_volumeSlider);
+    btnRow->addStretch();
+    ctrlLayout->addLayout(btnRow);
+
+    m_controlsOverlay->setStyleSheet("background: rgba(0,0,0,120);");
+    m_controlsOverlay->raise();
+    m_controlsOverlay->show();
+
+    // position overlay at bottom
+    m_controlsOverlay->setGeometry(0, height() - 80, width(), 80);
+}
+
+// ponytail: resize event repositions overlay; no layout manager for overlay needed
+void VideoPlayer::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    m_controlsOverlay->setGeometry(0, height() - 80, width(), 80);
 }
 
 void VideoPlayer::load(const QString &url) {
@@ -120,6 +144,22 @@ void VideoPlayer::toggleMute() {
     }
 }
 
+void VideoPlayer::showControls() {
+    m_controlsOverlay->show();
+}
+
+void VideoPlayer::hideControls() {
+    if (!m_seekDragging) {
+        m_controlsOverlay->hide();
+    }
+}
+
+void VideoPlayer::resetHideTimer() {
+    showControls();
+    m_hideTimer->start();
+    emit mouseActivity();
+}
+
 void VideoPlayer::onPositionChanged(qint64 position) {
     if (!m_seekDragging) {
         m_seekBar->setValue(static_cast<int>(position / 1000));
@@ -145,7 +185,20 @@ bool VideoPlayer::eventFilter(QObject *obj, QEvent *event) {
         else w->showFullScreen();
         return true;
     }
+    if (obj == m_videoWidget && event->type() == QEvent::MouseMove) {
+        resetHideTimer();
+    }
     return QWidget::eventFilter(obj, event);
+}
+
+void VideoPlayer::mouseMoveEvent(QMouseEvent *event) {
+    resetHideTimer();
+    QWidget::mouseMoveEvent(event);
+}
+
+void VideoPlayer::enterEvent(QEnterEvent *event) {
+    resetHideTimer();
+    QWidget::enterEvent(event);
 }
 
 QString VideoPlayer::formatTime(qint64 ms) {
