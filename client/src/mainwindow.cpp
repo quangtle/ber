@@ -97,7 +97,6 @@ void MainWindow::showConnectionDialog() {
 }
 
 void MainWindow::onConnected(const QString &serverUrl) {
-    m_serverUrl = serverUrl;
     m_statusLabel->setText("Connected: " + serverUrl);
     m_settings->setLastServer(serverUrl);
     m_libraryView->refresh();

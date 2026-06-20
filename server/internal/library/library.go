@@ -52,13 +52,12 @@ func New(db *sql.DB, libraryPath string) *Library {
 	return &Library{db: db, libraryPath: libraryPath}
 }
 
+const videoColumns = `id, title, file_path, file_size, duration,
+		width, height, codec, bitrate, container,
+		created_at, updated_at`
+
 func (l *Library) List() ([]Video, error) {
-	rows, err := l.db.Query(`
-		SELECT id, title, file_path, file_size, duration,
-		       width, height, codec, bitrate, container,
-		       created_at, updated_at
-		FROM videos ORDER BY title ASC
-	`)
+	rows, err := l.db.Query(`SELECT ` + videoColumns + ` FROM videos ORDER BY title ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +78,8 @@ func (l *Library) List() ([]Video, error) {
 
 func (l *Library) Get(id string) (*Video, error) {
 	var v Video
-	err := l.db.QueryRow(`
-		SELECT id, title, file_path, file_size, duration,
-		       width, height, codec, bitrate, container,
-		       created_at, updated_at
-		FROM videos WHERE id = ?
-	`, id).Scan(&v.ID, &v.Title, &v.FilePath, &v.FileSize,
+	err := l.db.QueryRow(`SELECT `+videoColumns+` FROM videos WHERE id = ?`,
+		id).Scan(&v.ID, &v.Title, &v.FilePath, &v.FileSize,
 		&v.Duration, &v.Width, &v.Height, &v.Codec,
 		&v.Bitrate, &v.Container, &v.CreatedAt, &v.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -102,7 +97,7 @@ func (l *Library) Add(path string) (*Video, error) {
 		return nil, fmt.Errorf("cannot access path: %w", err)
 	}
 	if info.IsDir() {
-		return nil, fmt.Errorf("path is a directory, use AddDir")
+		return nil, fmt.Errorf("path is a directory, not a video file")
 	}
 
 	ext := strings.ToLower(filepath.Ext(path))

@@ -40,5 +40,4 @@ private:
     Settings *m_settings;
     QLabel *m_statusLabel;
     QToolBar *m_toolbar;
-    QString m_serverUrl;
 };

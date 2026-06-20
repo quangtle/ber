@@ -52,7 +52,7 @@ $serverDir = Join-Path $rootDir "server"
 Push-Location $serverDir
 try {
     $serverOut = Join-Path $outDir "ber-server$ext"
-    go build -ldflags="-s -w -X main.Version=$Version" -o $serverOut .\cmd\ber-server\
+    go build -ldflags="-s -w -H=windowsgui -X main.Version=$Version" -o $serverOut .\cmd\ber-server\
     if ($LASTEXITCODE -ne 0) { throw "Server build failed" }
     Write-Host "  Server: $serverOut" -ForegroundColor Green
 } finally {
@@ -71,12 +71,13 @@ if ($os -eq "windows") {
     try {
         & cmd.exe /c "`"$vcvars`" > nul 2>&1 && cmake -S . -B `"$buildDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=`"$qtDir`" && cmake --build `"$buildDir`" --config Release && cmake --install `"$buildDir`" --prefix `"$outDir`""
         if ($LASTEXITCODE -ne 0) { throw "Client build failed" }
-        # windeployqt runs at post-build — copy its deployed DLLs and plugins
+        # windeployqt runs at post-build — copy only what the app actually needs
         Copy-Item "$buildDir/*.dll" $outDir -Force -ErrorAction SilentlyContinue
-        Get-ChildItem "$buildDir" -Directory | Where-Object {
-            $_.Name -match '^(generic|iconengines|imageformats|multimedia|networkinformation|platforms|styles|tls|translations)$'
-        } | ForEach-Object {
-            Copy-Item $_.FullName (Join-Path $outDir $_.Name) -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $outDir "vc_redist.x64.exe") -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $outDir "Qt6Svg.dll") -Force -ErrorAction SilentlyContinue
+        @('multimedia', 'platforms', 'styles') | ForEach-Object {
+            $src = Join-Path $buildDir $_
+            if (Test-Path $src) { Copy-Item $src (Join-Path $outDir $_) -Recurse -Force }
         }
         Write-Host "  Client: $outDir" -ForegroundColor Green
     } finally {
@@ -91,12 +92,13 @@ Copy-Item (Join-Path $rootDir "README.md") (Join-Path $outDir "README.md") -Forc
 Write-Host "`nCreating archive..." -ForegroundColor Yellow
 Push-Location $releaseDir
 try {
+    $archiveName = "ber-$Version-$Target"
     if ($os -eq "windows") {
-        $archive = "ber-$Version-$Target.zip"
-        Compress-Archive -Path "ber-$Version-$Target" -DestinationPath $archive -Force
+        $archive = "$archiveName.zip"
+        Compress-Archive -Path $archiveName -DestinationPath $archive -Force
     } else {
-        $archive = "ber-$Version-$Target.tar.gz"
-        & tar czf $archive "ber-$Version-$Target"
+        $archive = "$archiveName.tar.gz"
+        & tar czf $archive $archiveName
     }
     Write-Host "Archive: $releaseDir/$archive" -ForegroundColor Green
 } finally {

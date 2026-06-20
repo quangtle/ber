@@ -15,13 +15,4 @@ TEST_CASE("Settings read/write", "[settings]") {
         settings.setLastServer("192.168.1.100:8080");
         REQUIRE(settings.lastServer() == "192.168.1.100:8080");
     }
-
-    SECTION("default volume is 100") {
-        REQUIRE(settings.volume() == 100);
-    }
-
-    SECTION("write and read volume") {
-        settings.setVolume(75);
-        REQUIRE(settings.volume() == 75);
-    }
 }

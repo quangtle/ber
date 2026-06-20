@@ -36,6 +36,7 @@ set(HEADERS
 
 set(RESOURCES
     resources/ber.qrc
+    resources/ber.rc
 )
 
 add_executable(ber-client ${SOURCES} ${HEADERS} ${RESOURCES})

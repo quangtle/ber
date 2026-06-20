@@ -30,7 +30,7 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     setMouseTracking(true);
 
     m_hideTimer->setSingleShot(true);
-    m_hideTimer->setInterval(1000);
+    m_hideTimer->setInterval(3000); // 3 seconds of inactivity hides controls
     connect(m_hideTimer, &QTimer::timeout, this, [this]() {
         m_controlsBar->hide();
         emit idleTimeout();

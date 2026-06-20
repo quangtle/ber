@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/anomalyco/ber/internal/config"
 	"github.com/anomalyco/ber/internal/library"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -37,11 +36,10 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 
 type Handler struct {
 	lib *library.Library
-	cfg *config.Config
 }
 
-func NewRouter(lib *library.Library, cfg *config.Config) *chi.Mux {
-	h := &Handler{lib: lib, cfg: cfg}
+func NewRouter(lib *library.Library) *chi.Mux {
+	h := &Handler{lib: lib}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

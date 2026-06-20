@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/anomalyco/ber/internal/api"
-	"github.com/anomalyco/ber/internal/config"
 	"github.com/anomalyco/ber/internal/database"
 	"github.com/anomalyco/ber/internal/library"
 )
@@ -33,14 +32,13 @@ func TestStreamRangeRequestIntegration(t *testing.T) {
 	database.Migrate(db)
 
 	lib := library.New(db, libPath)
-	cfg := &config.Config{LibraryPath: libPath, DBPath: dbPath}
 
 	v, err := lib.Add(testFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	mux := api.NewRouter(lib, cfg)
+	mux := api.NewRouter(lib)
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 

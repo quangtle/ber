@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// ponytail: systray runs the Windows message loop on the main thread
-	systray.Run(onReady, onExit)
+	systray.Run(onReady, func() {})
 }
 
 func onReady() {
@@ -76,7 +76,7 @@ func onReady() {
 		log.Fatalf("failed to get web subdirectory: %v", err)
 	}
 
-	mux := api.NewRouter(lib, cfg)
+	mux := api.NewRouter(lib)
 	mux.Handle("/*", http.FileServer(http.FS(webSub)))
 
 	srv := &http.Server{
@@ -152,10 +152,6 @@ func onReady() {
 	log.Println("shutting down via tray...")
 	shutdown(srv, db)
 	systray.Quit()
-}
-
-func onExit() {
-	// cleanup done in shutdown
 }
 
 func launchDesktop() {

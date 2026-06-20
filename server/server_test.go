@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/anomalyco/ber/internal/api"
-	"github.com/anomalyco/ber/internal/config"
 	"github.com/anomalyco/ber/internal/database"
 	"github.com/anomalyco/ber/internal/library"
 )
@@ -34,9 +33,8 @@ func setupTestServer(t *testing.T) (http.Handler, string) {
 	database.Migrate(db)
 
 	lib := library.New(db, libPath)
-	cfg := &config.Config{LibraryPath: libPath, DBPath: dbPath}
 
-	return api.NewRouter(lib, cfg), testFile
+	return api.NewRouter(lib), testFile
 }
 
 func TestStatusEndpoint(t *testing.T) {

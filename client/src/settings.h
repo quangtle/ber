@@ -13,9 +13,6 @@ public:
     QString lastServer() const;
     void setLastServer(const QString &server);
 
-    int volume() const;
-    void setVolume(int volume);
-
 private:
     QSettings m_settings;
 };
