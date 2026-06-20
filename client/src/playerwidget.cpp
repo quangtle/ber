@@ -33,8 +33,6 @@ void PlayerWidget::setupUi() {
     tbLayout->addWidget(m_backBtn);
     tbLayout->addWidget(m_titleLabel, 1);
 
-    m_toolbar->setStyleSheet("background: rgba(0,0,0,120);");
-
     layout->addWidget(m_toolbar);
     layout->addWidget(m_videoPlayer, 1);
 
