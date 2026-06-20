@@ -12,15 +12,11 @@ PlayerWidget::PlayerWidget(ApiClient *client, QWidget *parent)
     , m_backBtn(new QPushButton("← Library"))
     , m_titleLabel(new QLabel())
     , m_toolbar(new QWidget(this))
-    , m_hideTimer(new QTimer(this))
 {
     setupUi();
 
-    m_hideTimer->setSingleShot(true);
-    m_hideTimer->setInterval(5000);
-    connect(m_hideTimer, &QTimer::timeout, this, [this]() { m_toolbar->hide(); });
-
-    connect(m_videoPlayer, &VideoPlayer::mouseActivity, this, &PlayerWidget::resetHideTimer);
+    connect(m_videoPlayer, &VideoPlayer::mouseActivity, this, [this]() { m_toolbar->show(); });
+    connect(m_videoPlayer, &VideoPlayer::idleTimeout, this, [this]() { m_toolbar->hide(); });
     connect(m_videoPlayer, &VideoPlayer::fullscreenToggled, this, &PlayerWidget::fullscreenToggled);
 }
 
@@ -48,9 +44,4 @@ void PlayerWidget::playVideo(const QString &videoId) {
     m_apiClient->fetchVideoInfo(videoId, [this](const QJsonObject &info) {
         m_titleLabel->setText(info["title"].toString());
     });
-}
-
-void PlayerWidget::resetHideTimer() {
-    m_toolbar->show();
-    m_hideTimer->start();
 }

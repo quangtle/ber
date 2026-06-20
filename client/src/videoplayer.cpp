@@ -31,7 +31,10 @@ VideoPlayer::VideoPlayer(QWidget *parent)
 
     m_hideTimer->setSingleShot(true);
     m_hideTimer->setInterval(1000);
-    connect(m_hideTimer, &QTimer::timeout, this, [this]() { m_controlsBar->hide(); });
+    connect(m_hideTimer, &QTimer::timeout, this, [this]() {
+        m_controlsBar->hide();
+        emit idleTimeout();
+    });
 
     connect(m_mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoPlayer::onPositionChanged);
     connect(m_mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoPlayer::onDurationChanged);

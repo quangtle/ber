@@ -19,6 +19,7 @@ public:
 signals:
     void playPauseToggled(bool playing);
     void mouseActivity();
+    void idleTimeout();
     void fullscreenToggled(bool fullscreen);
 
 public slots:
