@@ -7,6 +7,7 @@
 #include <QSlider>
 #include <QLabel>
 #include <QPushButton>
+#include <QEvent>
 
 class VideoPlayer : public QWidget {
     Q_OBJECT
@@ -14,6 +15,9 @@ class VideoPlayer : public QWidget {
 public:
     explicit VideoPlayer(QWidget *parent = nullptr);
     void load(const QString &url);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 public slots:
     void play();

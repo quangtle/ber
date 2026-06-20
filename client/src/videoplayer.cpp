@@ -2,7 +2,7 @@
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QStyle>
+#include <QMouseEvent>
 
 VideoPlayer::VideoPlayer(QWidget *parent)
     : QWidget(parent)
@@ -21,6 +21,7 @@ VideoPlayer::VideoPlayer(QWidget *parent)
     m_mediaPlayer->setVideoOutput(m_videoWidget);
     m_mediaPlayer->setAudioOutput(m_audioOutput);
     m_audioOutput->setVolume(1.0);
+    m_videoWidget->installEventFilter(this);
 
     connect(m_mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoPlayer::onPositionChanged);
     connect(m_mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoPlayer::onDurationChanged);
@@ -135,6 +136,16 @@ void VideoPlayer::onStateChanged(QMediaPlayer::PlaybackState state) {
     bool playing = (state == QMediaPlayer::PlayingState);
     m_playPauseBtn->setText(playing ? "⏸" : "▶");
     emit playPauseToggled(playing);
+}
+
+bool VideoPlayer::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == m_videoWidget && event->type() == QEvent::MouseButtonDblClick) {
+        auto *w = window();
+        if (w->isFullScreen()) w->showNormal();
+        else w->showFullScreen();
+        return true;
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 QString VideoPlayer::formatTime(qint64 ms) {
