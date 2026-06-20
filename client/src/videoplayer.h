@@ -22,6 +22,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void enterEvent(QEnterEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 public slots:
     void play();
@@ -34,6 +35,7 @@ public slots:
 signals:
     void playPauseToggled(bool playing);
     void mouseActivity();
+    void fullscreenToggled(bool fullscreen);
 
 private slots:
     void onPositionChanged(qint64 position);

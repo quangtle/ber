@@ -17,6 +17,7 @@ public:
 
 signals:
     void backToLibrary();
+    void fullscreenToggled(bool fullscreen);
 
 private:
     void setupUi();

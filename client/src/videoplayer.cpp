@@ -89,16 +89,17 @@ void VideoPlayer::setupUi() {
 
     m_controlsOverlay->setStyleSheet("background: rgba(0,0,0,120);");
     m_controlsOverlay->raise();
-    m_controlsOverlay->show();
-
-    // position overlay at bottom
-    m_controlsOverlay->setGeometry(0, height() - 80, width(), 80);
 }
 
-// ponytail: resize event repositions overlay; no layout manager for overlay needed
 void VideoPlayer::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
     m_controlsOverlay->setGeometry(0, height() - 80, width(), 80);
+}
+
+void VideoPlayer::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    m_controlsOverlay->setGeometry(0, height() - 80, width(), 80);
+    showControls();
 }
 
 void VideoPlayer::load(const QString &url) {
@@ -181,8 +182,9 @@ void VideoPlayer::onStateChanged(QMediaPlayer::PlaybackState state) {
 bool VideoPlayer::eventFilter(QObject *obj, QEvent *event) {
     if (obj == m_videoWidget && event->type() == QEvent::MouseButtonDblClick) {
         auto *w = window();
-        if (w->isFullScreen()) w->showNormal();
-        else w->showFullScreen();
+        bool fs = !w->isFullScreen();
+        if (fs) w->showFullScreen(); else w->showNormal();
+        emit fullscreenToggled(fs);
         return true;
     }
     if (obj == m_videoWidget && event->type() == QEvent::MouseMove) {

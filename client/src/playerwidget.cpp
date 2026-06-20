@@ -21,6 +21,7 @@ PlayerWidget::PlayerWidget(ApiClient *client, QWidget *parent)
     connect(m_hideTimer, &QTimer::timeout, this, [this]() { m_toolbar->hide(); });
 
     connect(m_videoPlayer, &VideoPlayer::mouseActivity, this, &PlayerWidget::resetHideTimer);
+    connect(m_videoPlayer, &VideoPlayer::fullscreenToggled, this, &PlayerWidget::fullscreenToggled);
 }
 
 void PlayerWidget::setupUi() {

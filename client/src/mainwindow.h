@@ -27,6 +27,7 @@ private slots:
     void showConnectionDialog();
     void onConnected(const QString &serverUrl);
     void onDisconnected();
+    void onFullscreenToggled(bool fullscreen);
     void toggleWindowVisibility();
     void showAboutDialog();
 
@@ -43,6 +44,7 @@ private:
     ApiClient *m_apiClient;
     Settings *m_settings;
     QLabel *m_statusLabel;
+    QToolBar *m_toolbar;
     QSystemTrayIcon *m_trayIcon;
     QMenu *m_trayMenu;
     QString m_serverUrl;

@@ -71,12 +71,12 @@ void MainWindow::setupUi() {
 }
 
 void MainWindow::setupToolbar() {
-    QToolBar *toolbar = addToolBar("Main");
-    toolbar->setMovable(false);
+    m_toolbar = addToolBar("Main");
+    m_toolbar->setMovable(false);
 
-    toolbar->addAction("Connect", this, &MainWindow::showConnectionDialog);
-    toolbar->addSeparator();
-    toolbar->addAction("Library", this, [this]() {
+    m_toolbar->addAction("Connect", this, &MainWindow::showConnectionDialog);
+    m_toolbar->addSeparator();
+    m_toolbar->addAction("Library", this, [this]() {
         m_centralStack->setCurrentWidget(m_libraryView);
     });
 }
@@ -135,6 +135,8 @@ void MainWindow::connectSignals() {
     connect(m_apiClient, &ApiClient::connectionFailed, this, [this](const QString &error) {
         m_statusLabel->setText("Connection failed: " + error);
     });
+
+    connect(m_playerWidget, &PlayerWidget::fullscreenToggled, this, &MainWindow::onFullscreenToggled);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -171,6 +173,11 @@ void MainWindow::onConnected(const QString &serverUrl) {
 void MainWindow::onDisconnected() {
     m_statusLabel->setText("Disconnected");
     m_centralStack->setCurrentWidget(m_libraryView);
+}
+
+void MainWindow::onFullscreenToggled(bool fullscreen) {
+    m_toolbar->setVisible(!fullscreen);
+    statusBar()->setVisible(!fullscreen);
 }
 
 void MainWindow::showAboutDialog() {
