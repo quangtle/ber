@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -97,6 +98,27 @@ func onReady() {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Fatalf("server error: %v", err)
 			}
+		}
+	}()
+
+	// UDP beacon for client auto-discovery
+	go func() {
+		addr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:10001")
+		if err != nil {
+			log.Printf("beacon: %v", err)
+			return
+		}
+		conn, err := net.DialUDP("udp4", nil, addr)
+		if err != nil {
+			log.Printf("beacon: %v", err)
+			return
+		}
+		defer conn.Close()
+		msg := []byte("ber-server:" + cfg.ListenAddr)
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			conn.Write(msg)
 		}
 	}()
 

@@ -52,13 +52,9 @@ void ConnectionDialog::onConnect() {
     m_statusLabel->setText("Connecting...");
     m_connectBtn->setEnabled(false);
 
+    // ponytail: connectToServer is async; close dialog, signals handle the rest
     m_apiClient->connectToServer(addr);
-    if (m_apiClient->isConnected()) {
-        accept();
-    } else {
-        m_statusLabel->setText("Connection failed. Check the address and try again.");
-        m_connectBtn->setEnabled(true);
-    }
+    accept();
 }
 
 void ConnectionDialog::onAutoDetect() {

@@ -36,9 +36,21 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("ber-client");
     setWindowIcon(createTrayIcon());
 
-    QString savedServer = m_settings->lastServer();
-    if (!savedServer.isEmpty()) {
-        showConnectionDialog();
+    // Auto-connect: try saved server, then discover, then give up
+    m_statusLabel->setText("Connecting...");
+    QString server;
+    QString saved = m_settings->lastServer();
+
+    if (!saved.isEmpty() && m_apiClient->tryConnect(saved)) {
+        server = saved;
+    } else {
+        server = m_apiClient->discoverServer();
+    }
+
+    if (!server.isEmpty()) {
+        m_apiClient->connectToServer(server);
+    } else {
+        m_statusLabel->setText("No server found — click Connect to enter address");
     }
 }
 
@@ -120,6 +132,9 @@ void MainWindow::connectSignals() {
 
     connect(m_apiClient, &ApiClient::connected, this, &MainWindow::onConnected);
     connect(m_apiClient, &ApiClient::disconnected, this, &MainWindow::onDisconnected);
+    connect(m_apiClient, &ApiClient::connectionFailed, this, [this](const QString &error) {
+        m_statusLabel->setText("Connection failed: " + error);
+    });
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

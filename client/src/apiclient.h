@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QList>
 #include <QNetworkAccessManager>
+#include <QUdpSocket>
 #include <functional>
 
 class ApiClient : public QObject {
@@ -15,6 +16,7 @@ public:
 
     void connectToServer(const QString &address);
     bool isConnected() const;
+    bool tryConnect(const QString &address);
     QString discoverServer();
 
     void fetchLibrary();

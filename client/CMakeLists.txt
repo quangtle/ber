@@ -7,6 +7,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Suppress WrapVulkanHeaders warning from Qt6::Gui — not needed for this project
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/.vulkan-stub")
+set(Vulkan_INCLUDE_DIR "${CMAKE_BINARY_DIR}/.vulkan-stub" CACHE PATH "" FORCE)
+
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Multimedia MultimediaWidgets Network)
 
 set(SOURCES
