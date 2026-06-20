@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QWidget>
-#include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
 
@@ -20,12 +19,10 @@ signals:
 
 private:
     void setupUi();
-    void updateControls();
 
     ApiClient *m_apiClient;
     VideoPlayer *m_videoPlayer;
     QPushButton *m_backBtn;
-    QPushButton *m_playPauseBtn;
     QLabel *m_titleLabel;
     QString m_currentVideoId;
 };
