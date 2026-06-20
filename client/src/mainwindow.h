@@ -5,8 +5,6 @@
 #include <QToolBar>
 #include <QStatusBar>
 #include <QLabel>
-#include <QSystemTrayIcon>
-#include <QMenu>
 
 class LibraryView;
 class PlayerWidget;
@@ -28,15 +26,12 @@ private slots:
     void onConnected(const QString &serverUrl);
     void onDisconnected();
     void onFullscreenToggled(bool fullscreen);
-    void toggleWindowVisibility();
     void showAboutDialog();
 
 private:
     void setupUi();
     void setupToolbar();
-    void setupTrayIcon();
     void connectSignals();
-    QIcon createTrayIcon();
 
     QStackedWidget *m_centralStack;
     LibraryView *m_libraryView;
@@ -45,7 +40,5 @@ private:
     Settings *m_settings;
     QLabel *m_statusLabel;
     QToolBar *m_toolbar;
-    QSystemTrayIcon *m_trayIcon;
-    QMenu *m_trayMenu;
     QString m_serverUrl;
 };

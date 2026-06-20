@@ -5,16 +5,10 @@
 #include "apiclient.h"
 #include "settings.h"
 
-#include <QMenuBar>
 #include <QAction>
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QApplication>
-#include <QStyle>
-#include <QPainter>
-#include <QPixmap>
-#include <QFont>
-#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -24,17 +18,13 @@ MainWindow::MainWindow(QWidget *parent)
     , m_apiClient(new ApiClient(this))
     , m_settings(new Settings(this))
     , m_statusLabel(new QLabel("Not connected"))
-    , m_trayIcon(new QSystemTrayIcon(this))
-    , m_trayMenu(new QMenu(this))
 {
     setupUi();
     setupToolbar();
-    setupTrayIcon();
     connectSignals();
 
     resize(1200, 800);
     setWindowTitle("ber-client");
-    setWindowIcon(createTrayIcon());
 
     // Auto-connect: try saved server, then discover, then give up
     m_statusLabel->setText("Connecting...");
@@ -52,10 +42,6 @@ MainWindow::MainWindow(QWidget *parent)
     } else {
         m_statusLabel->setText("No server found — click Connect to enter address");
     }
-}
-
-QIcon MainWindow::createTrayIcon() {
-    return QIcon(":/ber.ico");
 }
 
 void MainWindow::setupUi() {
@@ -81,45 +67,6 @@ void MainWindow::setupToolbar() {
     });
 }
 
-void MainWindow::setupTrayIcon() {
-    QIcon icon = createTrayIcon();
-    m_trayIcon->setIcon(icon);
-    m_trayIcon->setToolTip("ber-client");
-
-    QAction *showAction = m_trayMenu->addAction(style()->standardIcon(QStyle::SP_ComputerIcon), "Show ber");
-    m_trayMenu->addSeparator();
-    QAction *libraryAction = m_trayMenu->addAction(style()->standardIcon(QStyle::SP_DirIcon), "Manage Library");
-    m_trayMenu->addSeparator();
-    QAction *aboutAction = m_trayMenu->addAction(style()->standardIcon(QStyle::SP_MessageBoxInformation), "About");
-    QAction *quitAction = m_trayMenu->addAction(style()->standardIcon(QStyle::SP_DialogCloseButton), "Quit");
-
-    m_trayIcon->setContextMenu(m_trayMenu);
-
-    connect(showAction, &QAction::triggered, this, &MainWindow::toggleWindowVisibility);
-    connect(libraryAction, &QAction::triggered, this, [this]() {
-        showNormal();
-        activateWindow();
-        raise();
-        m_centralStack->setCurrentWidget(m_libraryView);
-    });
-    connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutDialog);
-    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
-
-    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::DoubleClick) {
-            toggleWindowVisibility();
-        }
-    });
-
-    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
-        qWarning() << "System tray is not available on this system";
-        return;
-    }
-
-    m_trayIcon->show();
-    m_trayIcon->showMessage("ber-client", "Running in system tray", QSystemTrayIcon::Information, 3000);
-}
-
 void MainWindow::connectSignals() {
     connect(m_libraryView, &LibraryView::videoSelected, this, [this](const QString &videoId) {
         m_playerWidget->playVideo(videoId);
@@ -140,22 +87,8 @@ void MainWindow::connectSignals() {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    if (m_trayIcon->isVisible()) {
-        hide();
-        event->ignore();
-    } else {
-        event->accept();
-    }
-}
-
-void MainWindow::toggleWindowVisibility() {
-    if (isVisible()) {
-        hide();
-    } else {
-        showNormal();
-        activateWindow();
-        raise();
-    }
+    QApplication::quit();
+    event->accept();
 }
 
 void MainWindow::showConnectionDialog() {
