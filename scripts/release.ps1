@@ -16,8 +16,9 @@ $env:Path = "$qtDir\bin;$env:Path"
 
 # Detect version
 if (-not $Version) {
-    $gitTag = git describe --tags --abbrev=0 2>$null
-    $gitHash = git rev-parse --short HEAD 2>$null
+    # ponytail: run via cmd to avoid PS 5.1 stderr-as-error wrapping
+    $gitTag = (cmd /c "git describe --tags --abbrev=0 2>nul") -replace '\s+', ''
+    $gitHash = (cmd /c "git rev-parse --short HEAD 2>nul") -replace '\s+', ''
     if ($gitTag -and ($gitTag -match '^v\d+\.\d+\.\d+')) {
         $Version = $gitTag.TrimStart('v')
     } else {
@@ -70,6 +71,13 @@ if ($os -eq "windows") {
     try {
         & cmd.exe /c "`"$vcvars`" > nul 2>&1 && cmake -S . -B `"$buildDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=`"$qtDir`" && cmake --build `"$buildDir`" --config Release && cmake --install `"$buildDir`" --prefix `"$outDir`""
         if ($LASTEXITCODE -ne 0) { throw "Client build failed" }
+        # windeployqt runs at post-build — copy its deployed DLLs and plugins
+        Copy-Item "$buildDir/*.dll" $outDir -Force -ErrorAction SilentlyContinue
+        Get-ChildItem "$buildDir" -Directory | Where-Object {
+            $_.Name -match '^(generic|iconengines|imageformats|multimedia|networkinformation|platforms|styles|tls|translations)$'
+        } | ForEach-Object {
+            Copy-Item $_.FullName (Join-Path $outDir $_.Name) -Recurse -Force -ErrorAction SilentlyContinue
+        }
         Write-Host "  Client: $outDir" -ForegroundColor Green
     } finally {
         Pop-Location

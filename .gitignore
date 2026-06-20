@@ -4,6 +4,7 @@ server/ber-server
 server/ber-server.exe
 client/ber-client
 client/ber-client.exe
+client/build*
 
 # IDE
 .vs/
