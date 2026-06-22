@@ -18,23 +18,24 @@ func setupTestServer(t *testing.T) (http.Handler, string) {
 	t.Helper()
 
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
+	dbPath := filepath.Join(tmpDir, "test.json")
 	libPath := filepath.Join(tmpDir, "videos")
 	os.MkdirAll(libPath, 0755)
 
 	testFile := filepath.Join(libPath, "test.mp4")
 	os.WriteFile(testFile, []byte("fake mp4 content"), 0644)
 
-	db, err := database.Open(dbPath)
+	store, err := database.Open(dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { db.Close() })
-	database.Migrate(db)
+	t.Cleanup(func() { store.Close() })
+	database.Migrate(store)
 
-	lib := library.New(db, libPath)
+	lib := library.New(store, libPath)
 
-	return api.NewRouter(lib), testFile
+	mux := api.NewRouter(lib)
+	return mux, testFile
 }
 
 func TestStatusEndpoint(t *testing.T) {
@@ -104,7 +105,7 @@ func TestLibraryEndpoints(t *testing.T) {
 
 		var env struct {
 			OK   bool              `json:"ok"`
-			Data []library.Video   `json:"data"`
+			Data []*library.Video  `json:"data"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
 			t.Fatal(err)

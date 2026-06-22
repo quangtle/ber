@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"embed"
-	"fmt"
 	"io/fs"
 	"log"
 	"net"
@@ -20,7 +18,7 @@ import (
 	"github.com/anomalyco/ber/internal/config"
 	"github.com/anomalyco/ber/internal/database"
 	"github.com/anomalyco/ber/internal/library"
-	systray "github.com/getlantern/systray"
+	"github.com/anomalyco/ber/internal/tray"
 )
 
 //go:embed all:web
@@ -38,33 +36,17 @@ func main() {
 		defer logFile.Close()
 	}
 
-	// ponytail: systray runs the Windows message loop on the main thread
-	systray.Run(onReady, func() {})
-}
-
-func onReady() {
 	cfg := config.ParseFlags()
 
-	systray.SetIcon(iconBytes)
-	systray.SetTooltip("ber-server")
-
-	mStatus := systray.AddMenuItem(fmt.Sprintf("ber-server — %s", cfg.ListenAddr), "Server status")
-	mStatus.Disable()
-	mDesktop := systray.AddMenuItem("Open Desktop", "Launch the desktop app")
-	mBrowser := systray.AddMenuItem("Open in Browser", "Open web UI in your browser")
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Shut down the server")
-
-	db, err := database.Open(cfg.DBPath)
+	store, err := database.Open(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
+	defer store.Close()
 
-	if err := database.Migrate(db); err != nil {
-		log.Fatalf("failed to run migrations: %v", err)
-	}
+	database.Migrate(store)
 
-	lib := library.New(db, cfg.LibraryPath)
+	lib := library.New(store, cfg.LibraryPath)
 	if cfg.ScanOnStart {
 		if err := lib.Scan(); err != nil {
 			log.Printf("warning: initial scan failed: %v", err)
@@ -76,12 +58,20 @@ func onReady() {
 		log.Fatalf("failed to get web subdirectory: %v", err)
 	}
 
-	mux := api.NewRouter(lib)
-	mux.Handle("/*", http.FileServer(http.FS(webSub)))
+	apiMux := api.NewRouter(lib)
+	mux := http.NewServeMux()
+	mux.Handle("/api/", apiMux)
+	mux.Handle("/", http.FileServer(http.FS(webSub)))
+
+	// ponytail: middleware stack wraps everything
+	var handler http.Handler = mux
+	handler = api.CORS(handler)
+	handler = api.Recoverer(handler)
+	handler = api.Logger(handler)
 
 	srv := &http.Server{
 		Addr:         cfg.ListenAddr,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 0,
 		IdleTimeout:  120 * time.Second,
@@ -89,7 +79,6 @@ func onReady() {
 
 	go func() {
 		log.Printf("ber-server %s listening on %s", Version, cfg.ListenAddr)
-		mStatus.SetTitle(fmt.Sprintf("ber-server %s — listening on %s", Version, cfg.ListenAddr))
 		if cfg.TLSCert != "" && cfg.TLSKey != "" {
 			if err := srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey); err != nil && err != http.ErrServerClosed {
 				log.Fatalf("server error: %v", err)
@@ -102,56 +91,59 @@ func onReady() {
 	}()
 
 	// UDP beacon for client auto-discovery
-	go func() {
-		addr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:10001")
-		if err != nil {
-			log.Printf("beacon: %v", err)
-			return
-		}
-		conn, err := net.DialUDP("udp4", nil, addr)
-		if err != nil {
-			log.Printf("beacon: %v", err)
-			return
-		}
-		defer conn.Close()
-		msg := []byte("ber-server:" + cfg.ListenAddr)
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			conn.Write(msg)
-		}
-	}()
+	go beacon(cfg.ListenAddr)
 
-	// Graceful shutdown on SIGINT/SIGTERM (for when running with console)
-	go func() {
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		<-quit
-		log.Println("shutting down...")
-		shutdown(srv, db)
-		systray.Quit()
-	}()
+	// Use a single quit channel for both signal and tray-quit
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Desktop app launcher
-	go func() {
-		for {
-			<-mDesktop.ClickedCh
-			launchDesktop()
-		}
-	}()
+	// ponytail: tray.Run blocks on the main goroutine,
+	// running the Windows message loop.
+	tray.Run(iconBytes, "ber-server", func(t *tray.Tray) {
+		mDesktop := t.AddMenuItem("Open Desktop", "Launch the desktop app")
+		mBrowser := t.AddMenuItem("Open in Browser", "Open web UI in your browser")
+		t.AddSeparator()
+		mQuit := t.AddMenuItem("Quit", "Shut down the server")
 
-	go func() {
-		for {
-			<-mBrowser.ClickedCh
-			openBrowser("http://" + cfg.ListenAddr)
-		}
-	}()
+		go func() {
+			for {
+				select {
+				case <-mDesktop.ClickedCh:
+					launchDesktop()
+				case <-mBrowser.ClickedCh:
+					openBrowser("http://" + cfg.ListenAddr)
+				case <-mQuit.ClickedCh:
+					shutdown(srv, store)
+					t.Quit()
+					return
+				case <-quit:
+					shutdown(srv, store)
+					t.Quit()
+					return
+				}
+			}
+		}()
+	})
+}
 
-	// Quit via tray menu
-	<-mQuit.ClickedCh
-	log.Println("shutting down via tray...")
-	shutdown(srv, db)
-	systray.Quit()
+func beacon(listenAddr string) {
+	addr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:10001")
+	if err != nil {
+		log.Printf("beacon: %v", err)
+		return
+	}
+	conn, err := net.DialUDP("udp4", nil, addr)
+	if err != nil {
+		log.Printf("beacon: %v", err)
+		return
+	}
+	defer conn.Close()
+	msg := []byte("ber-server:" + listenAddr)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		conn.Write(msg)
+	}
 }
 
 func launchDesktop() {
@@ -170,17 +162,16 @@ func launchDesktop() {
 }
 
 func openBrowser(url string) {
-	// ponytail: "start" is the Windows way, no need to find the browser
 	exec.Command("cmd", "/c", "start", url).Start()
 }
 
-func shutdown(srv *http.Server, db *sql.DB) {
+func shutdown(srv *http.Server, store *database.Store) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("forced shutdown: %v", err)
 	}
-	db.Close()
+	store.Close()
 }
 
 func openLog() *os.File {
