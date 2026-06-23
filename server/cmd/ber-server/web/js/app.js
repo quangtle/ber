@@ -2,8 +2,10 @@ let currentServer = window.location.host;
 let videos = [];
 
 const player = document.getElementById('videoPlayer');
-const libraryList = document.getElementById('libraryList');
+const playerBar = document.getElementById('playerBar');
+const libraryGrid = document.getElementById('libraryGrid');
 const statusEl = document.getElementById('status');
+const videoInfo = document.getElementById('videoInfo');
 const scanBtn = document.getElementById('scanBtn');
 const importBtn = document.getElementById('importBtn');
 const importModal = document.getElementById('importModal');
@@ -19,9 +21,6 @@ const browserList = document.getElementById('browserList');
 const browserUpBtn = document.getElementById('browserUpBtn');
 const browserCancelBtn = document.getElementById('browserCancelBtn');
 const browserSelectBtn = document.getElementById('browserSelectBtn');
-
-const emptyState = document.getElementById('emptyState');
-const videoInfo = document.getElementById('videoInfo');
 
 let currentBrowsePath = '';
 
@@ -54,27 +53,47 @@ async function loadLibrary() {
 }
 
 function renderLibrary() {
-  libraryList.innerHTML = '';
+  libraryGrid.innerHTML = '';
   if (videos.length === 0) {
-    const item = document.createElement('li');
-    item.textContent = 'No videos found. Click Import or Scan to add files.';
-    item.style.cursor = 'default';
-    item.style.color = 'var(--text-muted)';
-    libraryList.appendChild(item);
+    libraryGrid.style.display = 'block';
+    libraryGrid.textContent = 'No videos found. Click Import or Scan to add files.';
+    libraryGrid.style.color = 'var(--text-muted)';
+    libraryGrid.style.padding = '40px';
+    libraryGrid.style.textAlign = 'center';
     return;
   }
+  libraryGrid.style.display = 'grid';
   videos.forEach(v => {
-    const item = document.createElement('li');
-    item.textContent = v.title;
-    item.dataset.id = v.id;
-    item.addEventListener('click', () => playVideo(v));
-    libraryList.appendChild(item);
+    const card = document.createElement('div');
+    card.className = 'thumb-card';
+
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.loading = 'lazy';
+    img.alt = v.title;
+    img.src = apiUrl(`/stream/${v.id}/thumbnail`);
+    img.onerror = function() {
+      this.style.display = 'none';
+      const fb = document.createElement('div');
+      fb.className = 'thumb-fallback';
+      fb.textContent = '🎬';
+      this.parentNode.insertBefore(fb, this.nextSibling);
+    };
+
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = v.title;
+
+    card.appendChild(img);
+    card.appendChild(title);
+    card.addEventListener('click', () => playVideo(v));
+    libraryGrid.appendChild(card);
   });
 }
 
 function playVideo(video) {
-  emptyState.style.display = 'none';
-  player.style.display = 'block';
+  playerBar.classList.remove('hidden');
+  document.querySelector('main').classList.add('has-player');
 
   const streamUrl = `http://${currentServer}/api/stream/${video.id}`;
   player.src = streamUrl;
@@ -163,9 +182,7 @@ browserSelectBtn.addEventListener('click', () => {
 });
 
 browserUpBtn.addEventListener('click', () => {
-  // go to parent: strip trailing slash, take dirname
   let parent = currentBrowsePath.replace(/\\/g, '/').replace(/\/$/, '');
-  // if at a drive root (e.g. "C:" or "C"), show drive list
   if (/^[A-Za-z]$/.test(parent) || /^[A-Za-z]:$/.test(parent)) {
     loadBrowser('');
     return;
@@ -185,7 +202,6 @@ importConfirmBtn.addEventListener('click', async () => {
   importConfirmBtn.disabled = true;
   importConfirmBtn.textContent = 'Importing...';
   try {
-    // if path has a video extension, add single file; otherwise scan as folder
     const videoExts = ['.mp4','.mkv','.avi','.mov','.wmv','.flv','.webm','.mpeg','.mpg','.ts','.mts','.ogv'];
     const ext = path.substring(path.lastIndexOf('.')).toLowerCase();
     if (videoExts.includes(ext)) {

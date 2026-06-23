@@ -129,3 +129,7 @@ void ApiClient::fetchVideoInfo(const QString &videoId, std::function<void(const 
 QString ApiClient::streamUrl(const QString &videoId) const {
     return m_serverUrl + "/api/stream/" + videoId;
 }
+
+QString ApiClient::thumbnailUrl(const QString &videoId) const {
+    return m_serverUrl + "/api/stream/" + videoId + "/thumbnail";
+}

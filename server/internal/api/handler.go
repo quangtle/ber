@@ -5,13 +5,19 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/anomalyco/ber/internal/library"
 )
+
+// thumbLocks prevents concurrent ffmpeg thumbnailing of the same video.
+var thumbLocks sync.Map
 
 type envelope struct {
 	OK    bool        `json:"ok"`
@@ -280,16 +286,55 @@ func (h *Handler) thumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 	thumbPath := thumbnailPath(v.FilePath)
 	if _, err := os.Stat(thumbPath); os.IsNotExist(err) {
-		w.Header().Set("Content-Type", "image/png")
-		w.WriteHeader(http.StatusNotFound)
-		return
+		if err := generateThumb(v.FilePath, thumbPath); err != nil {
+			w.Header().Set("Content-Type", "image/png")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 	}
-	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Type", "image/jpeg")
 	http.ServeFile(w, r, thumbPath)
 }
 
 func thumbnailPath(filePath string) string {
 	dir := filepath.Dir(filePath)
 	base := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	return filepath.Join(dir, ".ber", base+".png")
+	return filepath.Join(dir, ".ber", base+".jpg")
+}
+
+func generateThumb(videoPath, thumbPath string) error {
+	// ponytail: per-video lock so two requests for the same video
+	// don't run ffmpeg concurrently.
+	done := make(chan struct{}, 1)
+	lv, _ := thumbLocks.LoadOrStore(videoPath, done)
+	lock := lv.(chan struct{})
+	select {
+	case lock <- struct{}{}:
+		// we hold the lock
+	default:
+		// another goroutine is generating — wait for it
+		<-lock
+		lock <- struct{}{}
+	}
+
+	release := func() { <-lock }
+	defer release()
+
+	// Check again after acquiring lock
+	if _, err := os.Stat(thumbPath); err == nil {
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(thumbPath), 0755); err != nil {
+		return err
+	}
+
+	// ponytail: grab a frame at 2min; -ss before -i means fast seek
+	cmd := exec.Command("ffmpeg", "-ss", "00:02:00", "-i", videoPath,
+		"-vframes", "1", "-q:v", "3", "-y", thumbPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
 }

@@ -22,6 +22,7 @@ public:
     void fetchLibrary();
     void fetchVideoInfo(const QString &videoId, std::function<void(const QJsonObject &)> callback);
     QString streamUrl(const QString &videoId) const;
+    QString thumbnailUrl(const QString &videoId) const;
 
 signals:
     void connected(const QString &serverUrl);

@@ -26,6 +26,7 @@ type Tray struct {
 	items   []*MenuItem
 	nextID  uint32
 	quit    chan struct{}
+	hwnd    uintptr // hidden window handle (set by Windows Run)
 }
 
 // AddMenuItem appends a clickable menu item and returns it.

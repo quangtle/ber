@@ -45,20 +45,12 @@
   </div>
 </div>
 <main>
-  <aside class="sidebar">
-    <h2>Library</h2>
-    <ul id="libraryList"></ul>
-  </aside>
-  <section class="player-section">
-    <div id="playerContainer">
-      <video id="videoPlayer" controls autoplay></video>
-      <div id="emptyState">
-        <p>Select a video from the library to start playback</p>
-      </div>
-    </div>
-    <div id="videoInfo" class="video-info"></div>
-  </section>
+  <div id="libraryGrid"></div>
 </main>
+<div id="playerBar" class="player-bar hidden">
+  <video id="videoPlayer" controls></video>
+  <div id="videoInfo" class="video-info"></div>
+</div>
 <script src="/js/app.js"></script>
 </body>
 </html>

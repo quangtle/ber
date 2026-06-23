@@ -4,6 +4,7 @@
 #include <QListWidget>
 #include <QList>
 #include <QJsonObject>
+#include <QNetworkAccessManager>
 
 class ApiClient;
 
@@ -24,7 +25,9 @@ private slots:
 
 private:
     void setupUi();
+    void loadThumbnail(const QString &videoId, QListWidgetItem *item);
 
     ApiClient *m_apiClient;
-    QListWidget *m_listWidget;
+    QListWidget *m_gridWidget;
+    QNetworkAccessManager *m_nam;
 };

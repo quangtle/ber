@@ -41,6 +41,7 @@ const (
 	wmNull           = 0x0000
 	wmApp            = 0x8000
 	wmTrayCallback   = wmApp + 1
+	wmQuitRequest    = wmApp + 2
 
 	// ponytail: latest NOTIFYICONDATA version on Win10+
 	nidSize    = 1032
@@ -96,6 +97,7 @@ func Run(icon []byte, tooltip string, onReady func(*Tray)) {
 		hInst,
 		0, // lpParam
 	)
+	t.hwnd = hwnd
 	if hwnd == 0 {
 		// ponytail: window creation failed (e.g. non-interactive session),
 		// fall back to signal-based blocking
@@ -137,6 +139,10 @@ func trayWndProc(t *Tray, hwnd, msg, wparam, lparam uintptr) uintptr {
 
 	case wmDestroy:
 		t.clearNotifyIcon(hwnd)
+		procPostQuitMessage.Call(0)
+		return 0
+
+	case wmQuitRequest:
 		procPostQuitMessage.Call(0)
 		return 0
 
@@ -230,7 +236,7 @@ func (t *Tray) showMenu(hwnd uintptr) {
 }
 
 func (t *Tray) Quit() {
-	procPostQuitMessage.Call(0)
+	procPostMessageW.Call(t.hwnd, wmQuitRequest, 0, 0)
 }
 
 func icoToHICON(ico []byte) uintptr {
