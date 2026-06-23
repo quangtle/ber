@@ -14,19 +14,21 @@ var (
 	user32  = syscall.NewLazyDLL("user32.dll")
 	shell32 = syscall.NewLazyDLL("shell32.dll")
 
-	procCreateWindowExW     = user32.NewProc("CreateWindowExW")
-	procDefWindowProcW      = user32.NewProc("DefWindowProcW")
-	procDestroyWindow       = user32.NewProc("DestroyWindow")
-	procDispatchMessageW    = user32.NewProc("DispatchMessageW")
-	procGetMessageW         = user32.NewProc("GetMessageW")
-	procLoadIconW           = user32.NewProc("LoadIconW")
-	procPostQuitMessage     = user32.NewProc("PostQuitMessage")
-	procRegisterClassExW    = user32.NewProc("RegisterClassExW")
-	procTranslateMessage    = user32.NewProc("TranslateMessage")
-	procAppendMenuW         = user32.NewProc("AppendMenuW")
-	procCreatePopupMenu     = user32.NewProc("CreatePopupMenu")
-	procDestroyMenu         = user32.NewProc("DestroyMenu")
-	procTrackPopupMenu      = user32.NewProc("TrackPopupMenu")
+	procCreateWindowExW        = user32.NewProc("CreateWindowExW")
+	procDefWindowProcW         = user32.NewProc("DefWindowProcW")
+	procDestroyWindow          = user32.NewProc("DestroyWindow")
+	procDispatchMessageW       = user32.NewProc("DispatchMessageW")
+	procGetCursorPos           = user32.NewProc("GetCursorPos")
+	procGetMessageW            = user32.NewProc("GetMessageW")
+	procLoadIconW              = user32.NewProc("LoadIconW")
+	procPostMessageW           = user32.NewProc("PostMessageW")
+	procPostQuitMessage        = user32.NewProc("PostQuitMessage")
+	procRegisterClassExW       = user32.NewProc("RegisterClassExW")
+	procTranslateMessage       = user32.NewProc("TranslateMessage")
+	procAppendMenuW            = user32.NewProc("AppendMenuW")
+	procCreatePopupMenu        = user32.NewProc("CreatePopupMenu")
+	procDestroyMenu            = user32.NewProc("DestroyMenu")
+	procTrackPopupMenu         = user32.NewProc("TrackPopupMenu")
 	procCreateIconFromResource = user32.NewProc("CreateIconFromResource")
 
 	procShellNotifyIcon = shell32.NewProc("Shell_NotifyIconW")
@@ -36,6 +38,7 @@ const (
 	wmCreate         = 0x0001
 	wmDestroy        = 0x0002
 	wmCommand        = 0x0111
+	wmNull           = 0x0000
 	wmApp            = 0x8000
 	wmTrayCallback   = wmApp + 1
 
@@ -52,7 +55,6 @@ const (
 	mfString    = 0x0000
 
 	tpmLeftAlign   = 0x0000
-	tpmBottomAlign = 0x0020
 	tpmRightButton = 0x0002
 )
 
@@ -153,7 +155,7 @@ func trayWndProc(t *Tray, hwnd, msg, wparam, lparam uintptr) uintptr {
 
 	case wmTrayCallback:
 		switch lparam {
-		case 0x0205: // WM_CONTEXTMENU (right-click)
+		case 0x007B, 0x0205: // WM_CONTEXTMENU / WM_RBUTTONUP (right-click)
 			t.showMenu(hwnd)
 		case 0x0203: // WM_LBUTTONDBLCLK
 			if len(t.items) > 0 {
@@ -214,11 +216,16 @@ func (t *Tray) showMenu(hwnd uintptr) {
 	}
 
 	procSetForegroundWindow.Call(hwnd)
+
+	var pt [2]int32
+	procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt[0])))
+
 	procTrackPopupMenu.Call(
 		hMenu,
-		tpmLeftAlign|tpmBottomAlign|tpmRightButton,
-		0, 0, 0, hwnd, 0,
+		tpmLeftAlign|tpmRightButton,
+		uintptr(pt[0]), uintptr(pt[1]), 0, hwnd, 0,
 	)
+	procPostMessageW.Call(hwnd, wmNull, 0, 0)
 	procDestroyMenu.Call(hMenu)
 }
 

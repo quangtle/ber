@@ -32,6 +32,7 @@ type Tray struct {
 func (t *Tray) AddMenuItem(title, _ string) *MenuItem {
 	t.nextID++
 	item := newMenuItem(t.nextID)
+	item.Title = title
 	t.items = append(t.items, item)
 	return item
 }
