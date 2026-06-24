@@ -8,20 +8,21 @@
 class VideoPlayer;
 class ApiClient;
 
-class PlayerWidget : public QWidget {
+class PlayerBar : public QWidget {
     Q_OBJECT
 
 public:
-    explicit PlayerWidget(ApiClient *client, QWidget *parent = nullptr);
-    void playVideo(const QString &videoId);
+    explicit PlayerBar(ApiClient *client, QWidget *parent = nullptr);
+    void playVideo(const QString &videoId, qint64 startPosMs = 0);
     void stop();
-    qint64 position() const;
 
 signals:
-    void backToLibrary();
-    void fullscreenToggled(bool fullscreen);
+    void closeClicked();
 
 private slots:
+    void onPlayPause();
+    void onVolumeChanged(int volume);
+    void onMuteToggle();
     void onPlayerPositionChanged(qint64 pos);
     void onPlayerDurationChanged(qint64 dur);
 
@@ -31,15 +32,15 @@ private:
 
     ApiClient *m_apiClient;
     VideoPlayer *m_videoPlayer;
-    QPushButton *m_backBtn;
-    QLabel *m_titleLabel;
-    QWidget *m_toolbar;
     QPushButton *m_playPauseBtn;
     QSlider *m_seekBar;
     QLabel *m_timeLabel;
     QLabel *m_durationLabel;
     QPushButton *m_muteBtn;
     QSlider *m_volumeSlider;
+    QLabel *m_titleLabel;
+    QPushButton *m_closeBtn;
     QString m_currentVideoId;
+    qint64 m_pendingSeekMs = 0;
     bool m_seekDragging = false;
 };

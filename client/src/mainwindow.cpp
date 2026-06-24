@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include "libraryview.h"
+#include "playerbar.h"
 #include "playerwidget.h"
 #include "connectiondialog.h"
 #include "apiclient.h"
 #include "settings.h"
 
 #include <QAction>
+#include <QVBoxLayout>
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QApplication>
@@ -13,8 +15,10 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , m_centralStack(new QStackedWidget(this))
+    , m_libraryPage(new QWidget(this))
     , m_libraryView(nullptr)
-    , m_playerWidget(nullptr)
+    , m_playerBar(nullptr)
+    , m_fullPlayer(nullptr)
     , m_apiClient(new ApiClient(this))
     , m_settings(new Settings(this))
     , m_statusLabel(new QLabel("Not connected"))
@@ -45,12 +49,21 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 void MainWindow::setupUi() {
-    m_libraryView = new LibraryView(m_apiClient, this);
-    m_playerWidget = new PlayerWidget(m_apiClient, this);
+    // Library page: thumbnail grid on top, player bar on bottom
+    m_libraryView = new LibraryView(m_apiClient, m_libraryPage);
+    m_playerBar = new PlayerBar(m_apiClient, m_libraryPage);
+    m_playerBar->hide();
 
-    m_centralStack->addWidget(m_libraryView);
-    m_centralStack->addWidget(m_playerWidget);
-    m_centralStack->setCurrentWidget(m_libraryView);
+    auto *libLayout = new QVBoxLayout(m_libraryPage);
+    libLayout->setContentsMargins(0, 0, 0, 0);
+    libLayout->setSpacing(0);
+    libLayout->addWidget(m_libraryView, 1);
+    libLayout->addWidget(m_playerBar);
+
+    m_centralStack->addWidget(m_libraryPage);  // page 0
+    m_fullPlayer = new PlayerWidget(m_apiClient, this);
+    m_centralStack->addWidget(m_fullPlayer);   // page 1
+    m_centralStack->setCurrentWidget(m_libraryPage);
 
     setCentralWidget(m_centralStack);
     statusBar()->addPermanentWidget(m_statusLabel);
@@ -61,20 +74,29 @@ void MainWindow::setupToolbar() {
     m_toolbar->setMovable(false);
 
     m_toolbar->addAction("Connect", this, &MainWindow::showConnectionDialog);
-    m_toolbar->addSeparator();
-    m_toolbar->addAction("Library", this, [this]() {
-        m_centralStack->setCurrentWidget(m_libraryView);
-    });
 }
 
 void MainWindow::connectSignals() {
+    // Click a video → fullscreen player
     connect(m_libraryView, &LibraryView::videoSelected, this, [this](const QString &videoId) {
-        m_playerWidget->playVideo(videoId);
-        m_centralStack->setCurrentWidget(m_playerWidget);
+        m_lastVideoId = videoId;
+        m_fullPlayer->playVideo(videoId);
+        m_centralStack->setCurrentWidget(m_fullPlayer);
     });
 
-    connect(m_playerWidget, &PlayerWidget::backToLibrary, this, [this]() {
-        m_centralStack->setCurrentWidget(m_libraryView);
+    // "← Library" in fullscreen → back to library, play in bottom bar
+    connect(m_fullPlayer, &PlayerWidget::backToLibrary, this, [this]() {
+        qint64 pos = m_fullPlayer->position();
+        m_centralStack->setCurrentWidget(m_libraryPage);
+        m_playerBar->playVideo(m_lastVideoId, pos);
+        m_playerBar->show();
+        m_fullPlayer->stop();
+    });
+
+    // Close button on bottom bar → stop and hide
+    connect(m_playerBar, &PlayerBar::closeClicked, this, [this]() {
+        m_playerBar->stop();
+        m_playerBar->hide();
     });
 
     connect(m_apiClient, &ApiClient::connected, this, &MainWindow::onConnected);
@@ -83,7 +105,7 @@ void MainWindow::connectSignals() {
         m_statusLabel->setText("Connection failed: " + error);
     });
 
-    connect(m_playerWidget, &PlayerWidget::fullscreenToggled, this, &MainWindow::onFullscreenToggled);
+    connect(m_fullPlayer, &PlayerWidget::fullscreenToggled, this, &MainWindow::onFullscreenToggled);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -104,7 +126,7 @@ void MainWindow::onConnected(const QString &serverUrl) {
 
 void MainWindow::onDisconnected() {
     m_statusLabel->setText("Disconnected");
-    m_centralStack->setCurrentWidget(m_libraryView);
+    m_centralStack->setCurrentWidget(m_libraryPage);
 }
 
 void MainWindow::onFullscreenToggled(bool fullscreen) {

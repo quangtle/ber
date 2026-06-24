@@ -18,6 +18,7 @@ set(SOURCES
     src/mainwindow.cpp
     src/connectiondialog.cpp
     src/libraryview.cpp
+    src/playerbar.cpp
     src/playerwidget.cpp
     src/videoplayer.cpp
     src/apiclient.cpp
@@ -28,6 +29,7 @@ set(HEADERS
     src/mainwindow.h
     src/connectiondialog.h
     src/libraryview.h
+    src/playerbar.h
     src/playerwidget.h
     src/videoplayer.h
     src/apiclient.h

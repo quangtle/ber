@@ -5,8 +5,10 @@
 #include <QToolBar>
 #include <QStatusBar>
 #include <QLabel>
+#include <QString>
 
 class LibraryView;
+class PlayerBar;
 class PlayerWidget;
 class ConnectionDialog;
 class ApiClient;
@@ -34,10 +36,13 @@ private:
     void connectSignals();
 
     QStackedWidget *m_centralStack;
+    QWidget *m_libraryPage;
     LibraryView *m_libraryView;
-    PlayerWidget *m_playerWidget;
+    PlayerBar *m_playerBar;
+    PlayerWidget *m_fullPlayer;
     ApiClient *m_apiClient;
     Settings *m_settings;
     QLabel *m_statusLabel;
     QToolBar *m_toolbar;
+    QString m_lastVideoId;
 };

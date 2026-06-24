@@ -4,10 +4,6 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QVideoWidget>
-#include <QSlider>
-#include <QLabel>
-#include <QPushButton>
-#include <QTimer>
 
 class VideoPlayer : public QWidget {
     Q_OBJECT
@@ -15,48 +11,29 @@ class VideoPlayer : public QWidget {
 public:
     explicit VideoPlayer(QWidget *parent = nullptr);
     void load(const QString &url);
+    qint64 position() const;
 
 signals:
     void playPauseToggled(bool playing);
-    void mouseActivity();
-    void idleTimeout();
+    void positionChanged(qint64 positionMs);
+    void durationChanged(qint64 durationMs);
     void fullscreenToggled(bool fullscreen);
+    void mutedChanged(bool muted);
+    void mediaReady();
 
 public slots:
     void play();
     void pause();
+    void stop();
     void togglePlayPause();
     void seek(int seconds);
     void setVolume(int volume);
     void toggleMute();
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void enterEvent(QEnterEvent *event) override;
-
-private slots:
-    void onPositionChanged(qint64 position);
-    void onDurationChanged(qint64 duration);
-    void onStateChanged(QMediaPlayer::PlaybackState state);
-
 private:
-    void setupUi();
-    void resetHideTimer();
-    static QString formatTime(qint64 ms);
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
     QMediaPlayer *m_mediaPlayer;
     QAudioOutput *m_audioOutput;
     QVideoWidget *m_videoWidget;
-
-    QPushButton *m_playPauseBtn;
-    QSlider *m_seekBar;
-    QLabel *m_timeLabel;
-    QLabel *m_durationLabel;
-    QPushButton *m_muteBtn;
-    QSlider *m_volumeSlider;
-    QWidget *m_controlsBar;
-    QTimer *m_hideTimer;
-
-    bool m_seekDragging = false;
 };
